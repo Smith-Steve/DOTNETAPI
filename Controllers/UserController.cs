@@ -1,6 +1,7 @@
 
 using System.Data;
 using DotnetAPI.Data;
+using DotnetAPI.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualBasic;
 
@@ -24,16 +25,32 @@ namespace DotnetAPI.Controllers
         {
             return _dapper.LoadSingle<DateTime>("SELECT GETDATE()");
         }
-        [HttpGet("GetUsers/{testValue}")]
-        public string[] GetUsers(string testValue)
+        [HttpGet("GetUsers")]
+        public IEnumerable<User> GetUsers()
         {
-            string[] responseArray = new string[]
-            {
-                "Test1",
-                "Test2",
-                testValue
-            };
-            return responseArray;
+            string sqlGetQuery = @"Select [UserId],
+                                    [FirstName],
+                                    [LastName],
+                                    [Email],
+                                    [Gender],
+                                    [Active] From TutorialAppSchema.Users";
+            IEnumerable<User> users = _dapper.LoadData<User>(sqlGetQuery);
+            return users;
+        }
+
+        [HttpGet("GetUser/{userId}")]
+        public User GetSingleUser(int userId)
+        {
+            string sqlGetQuery = @"Select [UserId],
+                                    [FirstName],
+                                    [LastName],
+                                    [Email],
+                                    [Gender],
+                                    [Active] 
+                                    From TutorialAppSchema.Users
+                                    Where UserId = " + userId.ToString();
+            User user = _dapper.LoadSingle<User>(sqlGetQuery);
+            return user;
         }
     }
 }
