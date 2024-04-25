@@ -102,7 +102,6 @@ namespace DotnetAPI.Controllers
             {
                 return Ok();
             }
-
             throw new Exception("Failed to Delete User");
         }
     }
