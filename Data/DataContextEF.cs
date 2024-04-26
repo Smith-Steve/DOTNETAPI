@@ -6,6 +6,7 @@ namespace DotnetAPI.Data
     public class DataContextEF : DbContext
     {
         private readonly IConfiguration _configuration;
+        
         public DataContextEF(IConfiguration configuration)
         {
             _configuration = configuration;

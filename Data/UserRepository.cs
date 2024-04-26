@@ -3,10 +3,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DotnetAPI.Data
 {
-    public class UserRepository
+    public class UserRepository : IUserRepository
     {
         DataContextEF _entityFramework;
-        IMapper _mapper;
         public UserRepository(IConfiguration configuration)
         {
             _entityFramework = new DataContextEF(configuration);
