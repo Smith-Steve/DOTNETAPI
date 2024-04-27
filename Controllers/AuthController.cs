@@ -1,9 +1,11 @@
+using System.Data;
 using System.Text;
 using System.Security.Cryptography;
 using DotnetAPI.Data;
 using DotnetAPI.Models;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 
 namespace DotnetAPI.Controllers
 {
@@ -61,12 +63,29 @@ namespace DotnetAPI.Controllers
                         numBytesRequested: 256/8
                     );
 
+                    //The "@" symbol is the way you create a variable in sql.
                     string sqlAddAuth = @"INSERT INTO TutorialAppSchema.Auth 
                                         ([Email], [PasswordHash], [PasswordSalt])
                                         VALUES
                                         ('" + userForRegistration.Email + "', @PasswordHash, @PasswordSalt)";
+                    
+                    List<SqlParameter> sqlParameters = new List<SqlParameter>();
 
-                    return Ok();
+                    SqlParameter passwordSaltParameter = new SqlParameter("@PasswordSalt", SqlDbType.VarBinary);
+                    passwordSaltParameter.Value = passwordSalt;
+
+                    SqlParameter passwordHashParameter = new SqlParameter("@PasswordHash", SqlDbType.VarBinary);
+                    passwordHashParameter.Value = passwordHash;
+
+                    sqlParameters.Add(passwordSaltParameter);
+                    sqlParameters.Add(passwordSaltParameter);
+
+                    if(_dapper.ExecuteSqlWithParameters(sqlAddAuth, sqlParameters))
+                    {
+                        return Ok();
+                    }
+
+                    throw new Exception("Failed to Register User.");
                 }
                 throw new Exception("User Already Exists.");
             }
