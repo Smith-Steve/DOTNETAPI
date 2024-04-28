@@ -21,6 +21,7 @@ namespace DotnetAPI.Data
         public T LoadSingle<T>(string sqlSingleQuery)
         {
             IDbConnection dbConnection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+            Console.WriteLine(sqlSingleQuery);
             return dbConnection.QuerySingle<T>(sqlSingleQuery);
         }
 

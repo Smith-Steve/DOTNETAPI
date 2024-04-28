@@ -6,6 +6,9 @@ using DotnetAPI.Models;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace DotnetAPI.Controllers
 {
@@ -118,7 +121,15 @@ namespace DotnetAPI.Controllers
                     return StatusCode(401, "Incorrect Password");
                 }
             }
-            return Ok();
+
+                        string userIdSql = @"
+                SELECT UserId FROM TutorialAppSchema.Users WHERE Email = '" +
+                userForLogin.Email + "'";
+
+            int userId = _dapper.LoadSingle<int>(userIdSql);
+            return Ok(new Dictionary<string,string> {
+                {"token", CreateToken(userId)}
+            });
         }
 
         private byte[] GetPasswordHash(string password, byte[] passwordSalt)
@@ -137,6 +148,34 @@ namespace DotnetAPI.Controllers
                 iterationCount: 100000,
                 numBytesRequested: 256/8
             );
+        }
+
+        private string CreateToken(int userId)
+        {
+            Claim[] claims = new Claim[] {
+                new Claim("userId", userId.ToString()),
+            };
+
+            // string? tokenKeyString = _configuration.GetSection("AppSettings:Token").Value;
+            // SymmetricSecurityKey tokenKey = new SymmetricSecurityKey(
+            //     Encoding.UTF8.GetBytes(
+            //         tokenKeyString != null ? tokenKeyString : ""
+            //     )
+            // );
+
+            SigningCredentials credentials = new SigningCredentials(tokenKey, SecurityAlgorithms.HmacSha512Signature);
+
+            SecurityTokenDescriptor descriptor = new SecurityTokenDescriptor()
+            {
+                Subject = new ClaimsIdentity(claims),
+                SigningCredentials = credentials,
+                Expires = DateTime.Now.AddDays(1)
+            };
+
+            JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
+
+            SecurityToken token = tokenHandler.CreateToken(descriptor);
+            return tokenHandler.WriteToken(token);
         }
     }
 }
