@@ -1,4 +1,6 @@
+using System.Text;
 using DotnetAPI.Data;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +30,25 @@ builder.Services.AddCors((options) =>
     });
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+//This is where we are accessing our token from.
+//We have to use it through a private method which is the instantiation of a class.
+//We do it this way to ensure that we're always using the same key.
+string? tokenKeyString = builder.Configuration.GetSection("AppSettings:TokenKey").Value;
+Console.WriteLine("Token Key Print Out: ");
+
+SymmetricSecurityKey tokenKey = new SymmetricSecurityKey(
+    Encoding.UTF8.GetBytes(
+        tokenKeyString != null ? tokenKeyString : ""
+    )
+);
+
+TokenValidationParameters tokenValidationParameters = new TokenValidationParameters()
+{
+    IssuerSigningKey = tokenKey,
+    ValidateIssuer = false,
+    ValidateIssuerSigningKey = false,
+    ValidAudience = false
+};
 
 var app = builder.Build();
 
