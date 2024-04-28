@@ -156,13 +156,14 @@ namespace DotnetAPI.Controllers
                 new Claim("userId", userId.ToString()),
             };
 
-            // string? tokenKeyString = _configuration.GetSection("AppSettings:Token").Value;
-            // SymmetricSecurityKey tokenKey = new SymmetricSecurityKey(
-            //     Encoding.UTF8.GetBytes(
-            //         tokenKeyString != null ? tokenKeyString : ""
-            //     )
-            // );
+            string? tokenKeyString = _configuration.GetSection("AppSettings:TokenKey").Value;
+            Console.WriteLine("Token Key Print Out: ");
 
+            SymmetricSecurityKey tokenKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(
+                    tokenKeyString != null ? tokenKeyString : ""
+                )
+            );
             SigningCredentials credentials = new SigningCredentials(tokenKey, SecurityAlgorithms.HmacSha512Signature);
 
             SecurityTokenDescriptor descriptor = new SecurityTokenDescriptor()
