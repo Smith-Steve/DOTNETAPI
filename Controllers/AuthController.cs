@@ -25,7 +25,8 @@ namespace DotnetAPI.Controllers
             if (userForRegistration.Password == userForRegistration.PasswordConfirm)
             {
                 //We need to send an inquiry to ensure that our new user exists.
-                string sqlCheckUserExists = $"Select Email FROM TutorialAppchema.Auth WHERE Email = {userForRegistration.Email}";
+                string sqlCheckUserExists = "SELECT Email FROM TutorialAppSchema.Auth WHERE Email = '" +
+                    userForRegistration.Email + "'";
 
                 IEnumerable<string> existingUsers = _dapper.LoadData<string>(sqlCheckUserExists);
                 //This is where we begin configuring the combination, and storage, or our users password so that
@@ -48,20 +49,12 @@ namespace DotnetAPI.Controllers
                     //that will serve as our 'scrambling' - and I assume - unscrambling key.
 
                     //This is where we access the password.
-                    string passwordSaltPlusString = _configuration.GetSection("AppSettings:PasswordKey").Value + Convert.ToBase64String(passwordSalt);
 
                     //Our password key does not live in the database. It only lives in the application - or the middle layer. This
                     //Is done so that if a hacker accesses the database, they will not actually have the password unless they can
                     //Access the application as well.
 
-                    byte[] passwordHash = KeyDerivation.Pbkdf2(
-                        password: userForRegistration.Password,
-                        salt: Encoding.ASCII.GetBytes(passwordSaltPlusString),
-                        prf: KeyDerivationPrf.HMACSHA256,
-                        //This is where we set the number of times that a password is hashed.
-                        iterationCount: 100000,
-                        numBytesRequested: 256/8
-                    );
+                    byte[] passwordHash = GetPasswordHash(userForRegistration.Password, passwordSalt);
 
                     //The "@" symbol is the way you create a variable in sql.
                     string sqlAddAuth = @"INSERT INTO TutorialAppSchema.Auth 
@@ -78,7 +71,7 @@ namespace DotnetAPI.Controllers
                     passwordHashParameter.Value = passwordHash;
 
                     sqlParameters.Add(passwordSaltParameter);
-                    sqlParameters.Add(passwordSaltParameter);
+                    sqlParameters.Add(passwordHashParameter);
 
                     if(_dapper.ExecuteSqlWithParameters(sqlAddAuth, sqlParameters))
                     {
@@ -94,7 +87,40 @@ namespace DotnetAPI.Controllers
         [HttpPost("Login")]
         public IActionResult Login(UserForLoginDTO userForLogin)
         {
+            string sqlForHashAndSalt = @"SELECT 
+                [PasswordHash], [PasswordSalt]
+                 FROM TutorialAppSchema.Auth WHERE Email = '" +
+                userForLogin.Email + "'";
+            Console.WriteLine(sqlForHashAndSalt);
+            UserForLoginConfirmationDTO userForConfirmation = _dapper.LoadSingle<UserForLoginConfirmationDTO>(sqlForHashAndSalt);
+            byte[] passwordHash = GetPasswordHash(userForLogin.Password, userForConfirmation.PasswordSalt);
+
+            for (int index = 0; index < passwordHash.Length; index++)
+            {
+                if (passwordHash[index]!= userForConfirmation.PasswordHash[index])
+                {
+                    return StatusCode(401, "Incorrect Password");
+                }
+            }
             return Ok();
+        }
+
+        private byte[] GetPasswordHash(string password, byte[] passwordSalt)
+        {
+            string passwordSaltPlusString = _configuration.GetSection("AppSettings:PasswordKey").Value + Convert.ToBase64String(passwordSalt);
+
+                    //Our password key does not live in the database. It only lives in the application - or the middle layer. This
+                    //Is done so that if a hacker accesses the database, they will not actually have the password unless they can
+                    //Access the application as well.
+
+            return KeyDerivation.Pbkdf2(
+                password: password,
+                salt: Encoding.ASCII.GetBytes(passwordSaltPlusString),
+                prf: KeyDerivationPrf.HMACSHA256,
+                //This is where we set the number of times that a password is hashed.
+                iterationCount: 100000,
+                numBytesRequested: 256/8
+            );
         }
     }
 }
