@@ -1,6 +1,8 @@
 using System.Text;
 using DotnetAPI.Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +12,6 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
 builder.Services.AddCors((options) =>
     {
         options.AddPolicy("DevCors", (corsBuilder) =>
@@ -30,25 +31,29 @@ builder.Services.AddCors((options) =>
     });
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-//This is where we are accessing our token from.
-//We have to use it through a private method which is the instantiation of a class.
-//We do it this way to ensure that we're always using the same key.
+
+
 string? tokenKeyString = builder.Configuration.GetSection("AppSettings:TokenKey").Value;
-Console.WriteLine("Token Key Print Out: ");
 
 SymmetricSecurityKey tokenKey = new SymmetricSecurityKey(
-    Encoding.UTF8.GetBytes(
-        tokenKeyString != null ? tokenKeyString : ""
-    )
-);
+        Encoding.UTF8.GetBytes(
+            tokenKeyString != null ? tokenKeyString : ""
+        )
+    );
 
 TokenValidationParameters tokenValidationParameters = new TokenValidationParameters()
 {
     IssuerSigningKey = tokenKey,
+    ValidateIssuerSigningKey = true,
     ValidateIssuer = false,
-    ValidateIssuerSigningKey = false,
-    ValidAudience = false
+    ValidateAudience = false
 };
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = tokenValidationParameters;
+    });
 
 var app = builder.Build();
 
@@ -64,6 +69,8 @@ else
     app.UseCors("ProdCors");
     app.UseHttpsRedirection();
 }
+
+app.UseAuthentication();
 
 app.UseAuthorization();
 

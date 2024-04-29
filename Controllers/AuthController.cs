@@ -9,9 +9,15 @@ using Microsoft.Data.SqlClient;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DotnetAPI.Controllers
 {
+    //"Authorize" is something that we can use to tell the controller that we want to ensure that they are authorized
+    // when they access this controller.
+    [Authorize]
+    [ApiController]
+    [Route("[controller]")]
     public class AuthController : ControllerBase
     {
         private readonly DataContextDapper _dapper;
@@ -21,7 +27,8 @@ namespace DotnetAPI.Controllers
             _dapper = new DataContextDapper(configuration);
             _configuration = configuration;
         }
-
+        [AllowAnonymous]
+        //This tells our API - just the one with the attribute - is allowed to recieve an anonymous request.
         [HttpPost("Register")]
         public IActionResult Register(UserForRegistrationDTO userForRegistration)
         {
@@ -103,6 +110,7 @@ namespace DotnetAPI.Controllers
             }
             throw new Exception("Passwords do not match.");
         }
+        [AllowAnonymous]
         [HttpPost("Login")]
         public IActionResult Login(UserForLoginDTO userForLogin)
         {
@@ -129,6 +137,27 @@ namespace DotnetAPI.Controllers
             int userId = _dapper.LoadSingle<int>(userIdSql);
             return Ok(new Dictionary<string,string> {
                 {"token", CreateToken(userId)}
+            });
+        }
+
+        [HttpGet("RefreshToken")]
+        public IActionResult RefreshToken()
+        {
+            string userId = User.FindFirst("userId")?.Value + "";
+
+            //We want to check and see if our user exists.
+            //Our SQL string.
+            string userIdSql = $"SELECT userId FROM TutorialAppSchema.Users WHERE UserId = {userId}";
+            
+            //Create a new interger value.
+            int userIdFromDb = _dapper.LoadSingle<int>(userIdSql); //This will return our userId
+
+            //If they do exist then we know that this token that gave us the UserId is valid.
+
+            //We can then create a new token and return it to the user so their user session is still valid.
+            
+            return Ok(new Dictionary<string,string> {
+                {"token", CreateToken(userIdFromDb)}
             });
         }
 

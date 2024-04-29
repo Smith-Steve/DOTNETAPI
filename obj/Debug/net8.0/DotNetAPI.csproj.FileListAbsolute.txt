@@ -73,3 +73,4 @@ C:\Users\Steph\csharp-tuts\dotnet-course-code\DotNetAPI\bin\Debug\net8.0\Microso
 C:\Users\Steph\csharp-tuts\dotnet-course-code\DotNetAPI\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Abstractions.dll
 C:\Users\Steph\csharp-tuts\dotnet-course-code\DotNetAPI\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Relational.dll
 C:\Users\Steph\csharp-tuts\dotnet-course-code\DotNetAPI\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.SqlServer.dll
+C:\Users\Steph\csharp-tuts\dotnet-course-code\DotNetAPI\bin\Debug\net8.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
