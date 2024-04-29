@@ -1,15 +1,11 @@
 using System.Data;
-using System.Text;
 using System.Security.Cryptography;
 using DotnetAPI.Data;
 using DotnetAPI.Models;
-using Microsoft.AspNetCore.Cryptography.KeyDerivation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using System.Security.Claims;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authorization;
+using DotnetAPI.Helpers;
 
 namespace DotnetAPI.Controllers
 {
@@ -22,10 +18,13 @@ namespace DotnetAPI.Controllers
     {
         private readonly DataContextDapper _dapper;
         private readonly IConfiguration _configuration;
+        private readonly AuthHelper _authHelper; //Underscore is local variable.
+
         public AuthController(IConfiguration configuration)
         {
             _dapper = new DataContextDapper(configuration);
             _configuration = configuration;
+            _authHelper = new AuthHelper(configuration);
         }
         [AllowAnonymous]
         //This tells our API - just the one with the attribute - is allowed to recieve an anonymous request.
@@ -64,7 +63,7 @@ namespace DotnetAPI.Controllers
                     //Is done so that if a hacker accesses the database, they will not actually have the password unless they can
                     //Access the application as well.
 
-                    byte[] passwordHash = GetPasswordHash(userForRegistration.Password, passwordSalt);
+                    byte[] passwordHash = _authHelper.GetPasswordHash(userForRegistration.Password, passwordSalt);
 
                     //The "@" symbol is the way you create a variable in sql.
                     string sqlAddAuth = @"INSERT INTO TutorialAppSchema.Auth 
@@ -120,7 +119,7 @@ namespace DotnetAPI.Controllers
                 userForLogin.Email + "'";
             Console.WriteLine(sqlForHashAndSalt);
             UserForLoginConfirmationDTO userForConfirmation = _dapper.LoadSingle<UserForLoginConfirmationDTO>(sqlForHashAndSalt);
-            byte[] passwordHash = GetPasswordHash(userForLogin.Password, userForConfirmation.PasswordSalt);
+            byte[] passwordHash = _authHelper.GetPasswordHash(userForLogin.Password, userForConfirmation.PasswordSalt);
 
             for (int index = 0; index < passwordHash.Length; index++)
             {
@@ -136,7 +135,7 @@ namespace DotnetAPI.Controllers
 
             int userId = _dapper.LoadSingle<int>(userIdSql);
             return Ok(new Dictionary<string,string> {
-                {"token", CreateToken(userId)}
+                {"token", _authHelper.CreateToken(userId)}
             });
         }
 
@@ -157,55 +156,8 @@ namespace DotnetAPI.Controllers
             //We can then create a new token and return it to the user so their user session is still valid.
             
             return Ok(new Dictionary<string,string> {
-                {"token", CreateToken(userIdFromDb)}
+                {"token", _authHelper.CreateToken(userIdFromDb)}
             });
-        }
-
-        private byte[] GetPasswordHash(string password, byte[] passwordSalt)
-        {
-            string passwordSaltPlusString = _configuration.GetSection("AppSettings:PasswordKey").Value + Convert.ToBase64String(passwordSalt);
-
-                    //Our password key does not live in the database. It only lives in the application - or the middle layer. This
-                    //Is done so that if a hacker accesses the database, they will not actually have the password unless they can
-                    //Access the application as well.
-
-            return KeyDerivation.Pbkdf2(
-                password: password,
-                salt: Encoding.ASCII.GetBytes(passwordSaltPlusString),
-                prf: KeyDerivationPrf.HMACSHA256,
-                //This is where we set the number of times that a password is hashed.
-                iterationCount: 100000,
-                numBytesRequested: 256/8
-            );
-        }
-
-        private string CreateToken(int userId)
-        {
-            Claim[] claims = new Claim[] {
-                new Claim("userId", userId.ToString()),
-            };
-
-            string? tokenKeyString = _configuration.GetSection("AppSettings:TokenKey").Value;
-            Console.WriteLine("Token Key Print Out: ");
-
-            SymmetricSecurityKey tokenKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(
-                    tokenKeyString != null ? tokenKeyString : ""
-                )
-            );
-            SigningCredentials credentials = new SigningCredentials(tokenKey, SecurityAlgorithms.HmacSha512Signature);
-
-            SecurityTokenDescriptor descriptor = new SecurityTokenDescriptor()
-            {
-                Subject = new ClaimsIdentity(claims),
-                SigningCredentials = credentials,
-                Expires = DateTime.Now.AddDays(1)
-            };
-
-            JwtSecurityTokenHandler tokenHandler = new JwtSecurityTokenHandler();
-
-            SecurityToken token = tokenHandler.CreateToken(descriptor);
-            return tokenHandler.WriteToken(token);
         }
     }
 }
