@@ -61,5 +61,6 @@ namespace DotnetAPI.Helpers
 
             SecurityToken token = tokenHandler.CreateToken(descriptor);
             return tokenHandler.WriteToken(token);
+        }
     }
 }
