@@ -17,13 +17,11 @@ namespace DotnetAPI.Controllers
     public class AuthController : ControllerBase
     {
         private readonly DataContextDapper _dapper;
-        private readonly IConfiguration _configuration;
         private readonly AuthHelper _authHelper; //Underscore is local variable.
 
         public AuthController(IConfiguration configuration)
         {
             _dapper = new DataContextDapper(configuration);
-            _configuration = configuration;
             _authHelper = new AuthHelper(configuration);
         }
         [AllowAnonymous]
